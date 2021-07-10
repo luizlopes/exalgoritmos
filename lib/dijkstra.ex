@@ -1,9 +1,14 @@
 defmodule Dijkstra do
+  @moduledoc """
+  Algoritmo Dijkstra
+  """
+
   def cria_grafo do
     %{
-      "inicio" => %{"a" => 6, "b" => 2},
+      "inicio" => %{"a" => 15, "b" => 2},
       "a" => %{"fim" => 1},
-      "b" => %{"a" => 3, "fim" => 5},
+      "b" => %{"a" => 11, "c" => 5},
+      "c" => %{"a" => 3, "fim" => 5},
       "fim" => nil
     }
   end
@@ -21,7 +26,7 @@ defmodule Dijkstra do
 
       iex> grafo_ponderado = Dijkstra.cria_grafo
       iex> Dijkstra.menor_custo("inicio", "fim", grafo_ponderado)
-      iex> {:ok, ["inicio", "b", "a", "fim"]
+      {["inicio", "b", "c", "a", "fim"], 11}
   """
   def menor_custo(inicio, fim, grafo) do
     grafo
