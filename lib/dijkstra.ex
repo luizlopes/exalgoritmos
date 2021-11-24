@@ -31,7 +31,7 @@ defmodule Dijkstra do
   def menor_custo(inicio, fim, grafo) do
     grafo
     |> inicia_contexto(inicio, fim)
-    |> busca_menor_custo
+    |> atualiza_contexto
   end
 
   defp inicia_contexto(grafo, inicio, fim) do
@@ -43,13 +43,14 @@ defmodule Dijkstra do
         nodo_atual: {inicio, 0},
         processados: [],
         custos: inicia_custos(grafo, inicio, fim),
-        caminho: inicia_caminhos(grafo, inicio, fim)
+        caminho: inicia_caminhos(grafo, inicio, fim),
+        tem_vizinhos?: is_map(grafo[inicio])
       }
     }
   end
 
-  defp inicia_custos(grafo, inicio, fim) do
-    grafo[inicio] |> Map.put(fim, 9999)
+  defp inicia_custos(grafo, inicio, _fim) do
+    grafo[inicio]
   end
 
   defp inicia_caminhos(grafo, inicio, _) do
@@ -59,17 +60,29 @@ defmodule Dijkstra do
     |> Enum.reduce(%{}, fn mapa, acc -> Map.merge(acc, mapa) end)
   end
 
-  defp busca_menor_custo({grafo, contexto}) do
-    nodo_menor_custo =
-      {grafo, contexto}
-      |> nodo_menor_custo()
+  defp atualiza_contexto({grafo, contexto}) do
+    {grafo, contexto}
+    |> busca_nodo_com_menor_custo
+    |> encontra_custos_menores
+    |> atualiza_custos
+    |> atualiza_caminho
+    |> atualiza_processados
+    |> atualiza_contexto
+  end
 
-    {_, %{nodo_atual: {nodo_chave, _}} = contexto} = nodo_menor_custo
+  defp busca_nodo_com_menor_custo(
+         {grafo, %{nodo_atual: {nodo_chave, nodo_custo}, processados: processados} = contexto}
+       ) do
+    {nodo, custo} =
+      grafo[nodo_chave]
+      |> Map.drop(processados)
+      |> Enum.min_by(fn {_, custo} -> custo end)
 
-    case grafo[nodo_chave] do
-      nil -> monta_caminho(contexto, contexto[:fim])
-      _ -> atualiza_contexto({grafo, contexto})
-    end
+    {grafo,
+     Map.merge(contexto, %{
+       nodo_atual: {nodo, custo + nodo_custo},
+       tem_vizinhos?: is_map(grafo[nodo])
+     })}
   end
 
   defp monta_caminho(contexto, fim, resultado \\ [])
@@ -82,29 +95,15 @@ defmodule Dijkstra do
     monta_caminho(contexto, caminho[fim], [fim | resultado])
   end
 
-  defp atualiza_contexto({grafo, contexto}) do
-    {grafo, contexto}
-    |> encontra_custos_menores()
-    |> atualiza_custos
-    |> atualiza_caminho
-    |> atualiza_processados
-    |> busca_menor_custo
-  end
-
-  defp nodo_menor_custo(
-         {grafo, %{nodo_atual: {nodo_chave, nodo_custo}, processados: processados} = contexto}
-       ) do
-    {nodo, custo} =
-      grafo[nodo_chave]
-      |> Map.drop(processados)
-      |> Enum.min_by(fn {_, custo} -> custo end)
-
-    {grafo, %{contexto | nodo_atual: {nodo, custo + nodo_custo}}}
+  defp encontra_custos_menores({_, %{tem_vizinhos?: false} = contexto}) do
+    monta_caminho(contexto, contexto[:fim])
   end
 
   defp encontra_custos_menores(
          {grafo, %{nodo_atual: {nodo_chave, nodo_valor}, custos: custos} = contexto}
        ) do
+    IO.inspect(contexto)
+
     custos_menores =
       grafo[nodo_chave]
       |> Enum.filter(fn {k, v} -> custos[k] > nodo_valor + v end)
